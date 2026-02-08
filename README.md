@@ -56,7 +56,7 @@ const y = radius * Math.sin(angle);
 ### Installation
 1.  Clone the repo:
     ```bash
-    git remote set-url origin https://github.com/rohilshah2006/subscription-calendar.git
+    git clone [https://github.com/rohilshah2006/subscription-calendar.git](https://github.com/rohilshah2006/subscription-calendar.git)
     ```
 2.  Install dependencies:
     ```bash
