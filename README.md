@@ -1,4 +1,4 @@
-# 🪐 Subscription Orbit
+# 🪐 Subscription Calendar
 
 **A high-fidelity, visualization-first subscription tracker built with React.**
 
@@ -43,6 +43,7 @@ The radial menu isn't a pre-made component. It calculates the arc length for eve
 const segmentAngle = (amount / totalAmount) * 360;
 const x = radius * Math.cos(angle);
 const y = radius * Math.sin(angle);
+```
 
 ---
 
