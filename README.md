@@ -28,13 +28,27 @@ At the click of a button, the interface warps from a calendar grid into a **Radi
 
 ## 🛠️ Under the Hood
 
+### Tech Stack
+
+<div align="left">
+  <img src="https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB" alt="React" />
+  <img src="https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+  <br>
+  <img src="https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel" />
+</div>
+
+<br>
+
 This project avoids heavy UI libraries in favor of custom implementation for maximum performance and control.
 
-* **Core:** React 18
-* **Styling:** Tailwind CSS + Custom Keyframe Animations
+* **Frontend:** React 19, TypeScript
+* **Styling:** Tailwind CSS + Custom CSS Keyframe Animations
+* **Build Tool:** Vite
 * **State Management:** React Hooks (`useState`, `useRef`, `useEffect`)
-* **Data Persistence:** Asynchronous File Storage (JSON)
-* **Icons:** Lucide React + Emoji/Text fallback engine
+* **Data Persistence:** Asynchronous File Storage via `window.storage` IPC bridge (JSON)
+* **Icons:** Emoji / Text / SVG fallback engine (zero icon libraries)
 
 ### The "Math" Bit
 The radial menu isn't a pre-made component. It calculates the arc length for every subscription based on its cost relative to the total:
@@ -75,6 +89,25 @@ You can easily add new icons or currency types in the `App.tsx` file. The app cu
 * **Emojis:** 🎵, 📺, 🎮
 * **Text:** "N" (Netflix), "Sp" (Spotify)
 * **Preset SVGs:** Built-in brand logos.
+
+---
+
+## 📋 Changelog
+
+### v1.1.0 — March 2, 2026
+* **Edit Subscriptions panel** — Clicking "Edit Subscriptions" in the Manage panel now opens a full management UI.
+  * Inline edit form for every subscription (name, amount, day, icon, color, start date)
+  * Delete with confirmation dialog
+  * Toast notifications for saves and deletions
+  * Changes persist to local storage
+
+### v1.0.0 — February 8, 2026
+* Initial release
+* Radial "Orbit" spending visualization
+* Monthly and yearly calendar views with smooth transitions
+* Subscription conflict resolution (multiple subs on same day)
+* Custom cursor, context-aware tooltips, and persisted state
+* Add new subscription form
 
 ---
 

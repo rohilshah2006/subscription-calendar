@@ -29,6 +29,15 @@ export default function App() {
   const [addFormClosing, setAddFormClosing] = useState(false);
   const [managePanelClosing, setManagePanelClosing] = useState(false);
   const [yearPickerClosing, setYearPickerClosing] = useState(false);
+  const [showEditPanel, setShowEditPanel] = useState(false);
+  const [editPanelClosing, setEditPanelClosing] = useState(false);
+  const [editingSubId, setEditingSubId] = useState(null);
+  const [editForm, setEditForm] = useState({ name: "", amount: "", icon: "", day: "", color: "#E50914", since: "" });
+  const [editIconMethod, setEditIconMethod] = useState("emoji");
+  const [deletingSubId, setDeletingSubId] = useState(null);
+  const [editFormError, setEditFormError] = useState("");
+  const [showDeletedMessage, setShowDeletedMessage] = useState(false);
+  const [showEditedMessage, setShowEditedMessage] = useState(false);
 
   const [newSubName, setNewSubName] = useState("");
   const [newSubAmount, setNewSubAmount] = useState("");
@@ -489,6 +498,82 @@ export default function App() {
     }, 300);
   };
 
+  const handleStartEdit = (sub) => {
+    setEditingSubId(sub.id);
+    setEditForm({
+      name: sub.name,
+      amount: sub.amount.toString(),
+      icon: sub.icon,
+      day: sub.day.toString(),
+      color: sub.color,
+      since: sub.since,
+    });
+    setEditFormError("");
+    // Detect icon type for the toggle
+    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1F004}-\u{1F0CF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{1F170}-\u{1F251}]/u;
+    if (emojiRegex.test(sub.icon)) {
+      setEditIconMethod("emoji");
+    } else {
+      setEditIconMethod("letter");
+    }
+  };
+
+  const handleSaveEdit = () => {
+    if (!editForm.name.trim()) { setEditFormError("Please enter a name"); return; }
+    if (!editForm.amount || parseFloat(editForm.amount) <= 0) { setEditFormError("Please enter a valid amount"); return; }
+    if (!editForm.icon.trim()) { setEditFormError("Please select or enter an icon"); return; }
+    if (!editForm.day || parseInt(editForm.day) < 1 || parseInt(editForm.day) > 31) { setEditFormError("Please enter a valid day (1-31)"); return; }
+    if (!editForm.since) { setEditFormError("Please select a start date"); return; }
+
+    const day = parseInt(editForm.day);
+    const amount = parseFloat(editForm.amount);
+    const getSuffix = (d) => {
+      if (d === 1 || d === 21 || d === 31) return "st";
+      if (d === 2 || d === 22) return "nd";
+      if (d === 3 || d === 23) return "rd";
+      return "th";
+    };
+    const startDate = new Date(editForm.since);
+    const now = new Date();
+    const monthsSince = (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth());
+    const totalAmount = Math.max(0, monthsSince) * amount;
+
+    setSubscriptions(subscriptions.map((s) =>
+      s.id === editingSubId
+        ? {
+            ...s,
+            name: editForm.name,
+            icon: editForm.icon,
+            color: editForm.color,
+            day: day,
+            amount: amount,
+            frequency: `Every ${day}${getSuffix(day)}`,
+            total: totalAmount,
+            since: editForm.since,
+          }
+        : s
+    ));
+    setEditingSubId(null);
+    setEditFormError("");
+    setShowEditedMessage(true);
+    setTimeout(() => setShowEditedMessage(false), 3000);
+  };
+
+  const handleDeleteSubscription = (id) => {
+    setSubscriptions(subscriptions.filter((s) => s.id !== id));
+    // Clean up primarySubsByDay entries that reference this subscription
+    const updatedPrimary = { ...primarySubsByDay };
+    for (const key in updatedPrimary) {
+      if (updatedPrimary[key] === id) {
+        delete updatedPrimary[key];
+      }
+    }
+    setPrimarySubsByDay(updatedPrimary);
+    setDeletingSubId(null);
+    setShowDeletedMessage(true);
+    setTimeout(() => setShowDeletedMessage(false), 3000);
+  };
+
   return (
     <div
       className="min-h-screen bg-black text-white p-8 flex items-center justify-center"
@@ -563,6 +648,44 @@ export default function App() {
               }}
             >
               Subscription added!
+            </span>
+          </div>
+        )}
+
+        {showDeletedMessage && (
+          <div
+            className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3"
+            style={{
+              animation:
+                "popupModal 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), fadeOut 0.3s ease-out 2.7s forwards",
+            }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"
+              style={{ filter: "drop-shadow(0 0 3px black) drop-shadow(0 0 6px black)" }}>
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+            <span className="font-bold text-2xl text-white"
+              style={{ textShadow: "0 0 4px black, 0 0 8px black, 0 0 12px black, 2px 2px 4px black" }}>
+              Subscription deleted!
+            </span>
+          </div>
+        )}
+
+        {showEditedMessage && (
+          <div
+            className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3"
+            style={{
+              animation:
+                "popupModal 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), fadeOut 0.3s ease-out 2.7s forwards",
+            }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"
+              style={{ filter: "drop-shadow(0 0 3px black) drop-shadow(0 0 6px black)" }}>
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+            <span className="font-bold text-2xl text-white"
+              style={{ textShadow: "0 0 4px black, 0 0 8px black, 0 0 12px black, 2px 2px 4px black" }}>
+              Subscription updated!
             </span>
           </div>
         )}
@@ -863,6 +986,14 @@ export default function App() {
                   </div>
                 </button>
                 <button
+                  onClick={() => {
+                    setManagePanelClosing(true);
+                    setTimeout(() => {
+                      setShowManagePanel(false);
+                      setManagePanelClosing(false);
+                      setShowEditPanel(true);
+                    }, 300);
+                  }}
                   className="bg-gradient-to-br from-gray-700 to-gray-800 text-white rounded-2xl p-8 transition-all duration-300 flex flex-col items-center justify-center gap-4 border-2 border-gray-600"
                   style={{ minHeight: "200px" }}
                   onMouseEnter={(e) => {
@@ -1176,6 +1307,269 @@ export default function App() {
                     Add Subscription
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showEditPanel && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setEditPanelClosing(true);
+              setTimeout(() => {
+                setShowEditPanel(false);
+                setEditPanelClosing(false);
+                setEditingSubId(null);
+                setDeletingSubId(null);
+                setEditFormError("");
+              }, 300);
+            }}
+            style={{
+              animation: editPanelClosing
+                ? "fadeOut 0.3s ease-out"
+                : "fadeIn 0.2s ease-out",
+            }}
+          >
+            <div
+              className="bg-gray-900 rounded-2xl p-6 max-w-lg w-full border border-gray-700 max-h-[85vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                animation: editPanelClosing
+                  ? "popupModalClose 0.3s cubic-bezier(0.6, 0, 0.8, 0.4) forwards"
+                  : "popupModal 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+              }}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex-1"></div>
+                <h2 className="text-2xl font-bold text-center">
+                  Edit Subscriptions
+                </h2>
+                <div className="flex-1 flex justify-end">
+                  <button
+                    onClick={() => {
+                      setEditPanelClosing(true);
+                      setTimeout(() => {
+                        setShowEditPanel(false);
+                        setEditPanelClosing(false);
+                        setEditingSubId(null);
+                        setDeletingSubId(null);
+                        setEditFormError("");
+                      }, 300);
+                    }}
+                    className="text-gray-400 hover:text-white transition-colors text-xl"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-y-auto flex-1 space-y-3 pr-1" style={{ scrollbarWidth: "thin", scrollbarColor: "#4B5563 transparent" }}>
+                {subscriptions.length === 0 && (
+                  <div className="text-center text-gray-500 py-12">
+                    <div className="text-4xl mb-3">📭</div>
+                    <div className="text-lg">No subscriptions yet</div>
+                  </div>
+                )}
+                {subscriptions.map((sub) => (
+                  <div key={sub.id} className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+                    {/* Delete confirmation overlay */}
+                    {deletingSubId === sub.id ? (
+                      <div className="p-5" style={{ animation: "fadeIn 0.15s ease-out" }}>
+                        <div className="text-center mb-4">
+                          <div className="text-lg font-semibold mb-1">Delete {sub.name}?</div>
+                          <div className="text-sm text-gray-400">This action cannot be undone.</div>
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => setDeletingSubId(null)}
+                            className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2.5 rounded-lg transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSubscription(sub.id)}
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ) : editingSubId === sub.id ? (
+                      /* Inline edit form */
+                      <div className="p-5 space-y-4" style={{ animation: "fadeIn 0.15s ease-out" }}>
+                        {editFormError && (
+                          <div className="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg px-4 py-3 text-red-200 text-sm">
+                            {editFormError}
+                          </div>
+                        )}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-300 mb-2">Name</label>
+                          <input
+                            type="text"
+                            value={editForm.name}
+                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">Amount</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editForm.amount}
+                              onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">Day</label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="31"
+                              value={editForm.day}
+                              onChange={(e) => {
+                                let v = e.target.value;
+                                if (v === "") { setEditForm({ ...editForm, day: "" }); return; }
+                                if (!/^\d+$/.test(v)) return;
+                                let n = parseInt(v);
+                                if (n < 1) n = 1;
+                                if (n > 31) n = 31;
+                                setEditForm({ ...editForm, day: n.toString() });
+                              }}
+                              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-300 mb-2">Icon</label>
+                          <div className="flex gap-2 mb-3">
+                            <button
+                              onClick={() => setEditIconMethod("emoji")}
+                              className={`flex-1 py-2 rounded-lg transition-colors text-sm ${editIconMethod === "emoji" ? "bg-gray-700 text-white" : "bg-gray-900 text-gray-400"}`}
+                            >Emoji</button>
+                            <button
+                              onClick={() => setEditIconMethod("preset")}
+                              className={`flex-1 py-2 rounded-lg transition-colors text-sm ${editIconMethod === "preset" ? "bg-gray-700 text-white" : "bg-gray-900 text-gray-400"}`}
+                            >Preset</button>
+                            <button
+                              onClick={() => setEditIconMethod("letter")}
+                              className={`flex-1 py-2 rounded-lg transition-colors text-sm ${editIconMethod === "letter" ? "bg-gray-700 text-white" : "bg-gray-900 text-gray-400"}`}
+                            >Custom</button>
+                          </div>
+                          {editIconMethod === "emoji" && (
+                            <input
+                              type="text"
+                              placeholder="e.g. 🎵 📺 💰"
+                              maxLength={2}
+                              value={editForm.icon}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1F004}-\u{1F0CF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{1F170}-\u{1F251}]/gu;
+                                const emojis = value.match(emojiRegex);
+                                setEditForm({ ...editForm, icon: emojis ? emojis.join("").slice(0, 2) : "" });
+                              }}
+                              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                            />
+                          )}
+                          {editIconMethod === "preset" && (
+                            <div className="grid grid-cols-6 gap-2">
+                              {["🎵", "📺", "🎮", "☁️", "💻", "📱", "🎬", "🏋️", "🍔", "🚗", "✈️", "🏠"].map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  onClick={() => setEditForm({ ...editForm, icon: emoji })}
+                                  className={`bg-gray-900 hover:bg-gray-700 hover:border-gray-500 hover:scale-110 border rounded-lg p-3 text-2xl transition-all duration-200 ${editForm.icon === emoji ? "border-blue-500 bg-gray-700" : "border-gray-700"}`}
+                                >{emoji}</button>
+                              ))}
+                            </div>
+                          )}
+                          {editIconMethod === "letter" && (
+                            <input
+                              type="text"
+                              placeholder="e.g. N, YT, $, ★"
+                              maxLength={2}
+                              value={editForm.icon}
+                              onChange={(e) => setEditForm({ ...editForm, icon: e.target.value })}
+                              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                            />
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">Since</label>
+                            <input
+                              type="date"
+                              value={editForm.since}
+                              onChange={(e) => setEditForm({ ...editForm, since: e.target.value })}
+                              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">Color</label>
+                            <input
+                              type="color"
+                              value={editForm.color}
+                              onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
+                              className="w-full h-10 bg-gray-900 border border-gray-700 rounded-lg"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                          <button
+                            onClick={() => { setEditingSubId(null); setEditFormError(""); }}
+                            className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2.5 rounded-lg transition-colors"
+                          >Cancel</button>
+                          <button
+                            onClick={handleSaveEdit}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors"
+                          >Save Changes</button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Normal row display */
+                      <div className="p-4 flex items-center gap-4">
+                        <div
+                          className="w-11 h-11 rounded-full flex items-center justify-center text-xl flex-shrink-0"
+                          style={{ backgroundColor: sub.color + "22", border: `2px solid ${sub.color}` }}
+                        >
+                          {renderSubscriptionIcon({ ...sub, icon: sub.icon })}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-white truncate">{sub.name}</div>
+                          <div className="text-sm text-gray-400">€{sub.amount.toFixed(2)} • {sub.frequency}</div>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => handleStartEdit(sub)}
+                            className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-700"
+                            title="Edit"
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => setDeletingSubId(sub.id)}
+                            className="text-gray-400 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-gray-700"
+                            title="Delete"
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-gray-700 text-center text-gray-400 text-sm">
+                {subscriptions.length} subscription{subscriptions.length !== 1 ? "s" : ""} • €{totalSpend}/month
               </div>
             </div>
           </div>
