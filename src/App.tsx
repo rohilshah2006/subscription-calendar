@@ -32,7 +32,7 @@ export default function App() {
   const [showEditPanel, setShowEditPanel] = useState(false);
   const [editPanelClosing, setEditPanelClosing] = useState(false);
   const [editingSubId, setEditingSubId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: "", amount: "", icon: "", day: "", color: "#E50914", since: "", url: "" });
+  const [editForm, setEditForm] = useState({ name: "", amount: "", icon: "", day: "", color: "#E50914", since: "", url: "", currency: "€" });
   const [editIconMethod, setEditIconMethod] = useState("emoji");
   const [deletingSubId, setDeletingSubId] = useState(null);
   const [editFormError, setEditFormError] = useState("");
@@ -46,6 +46,7 @@ export default function App() {
   const [newSubColor, setNewSubColor] = useState("#E50914");
   const [newSubSince, setNewSubSince] = useState("");
   const [newSubUrl, setNewSubUrl] = useState("");
+  const [newSubCurrency, setNewSubCurrency] = useState("€");
   const [formError, setFormError] = useState("");
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [primarySubsByDay, setPrimarySubsByDay] = useState({});
@@ -71,6 +72,7 @@ export default function App() {
       total: 47.88,
       since: "2022-03-01",
       url: undefined as string | undefined,
+      currency: "€",
     },
     {
       id: 2,
@@ -230,9 +232,32 @@ export default function App() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
+  const getCurrencySymbol = (currencyStr: string) => {
+    if (!currencyStr) return "€";
+    return currencyStr;
+  };
+
+  const normalizeUrl = (url: string) => {
+    if (!url) return url;
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    return `https://${url}`;
+  };
+
   const totalSpend = subscriptions
     .reduce((sum, sub) => sum + sub.amount, 0)
     .toFixed(2);
+  const primaryCurrency = (() => {
+    const counts: Record<string, number> = {};
+    subscriptions.forEach(sub => {
+      const c = sub.currency || "€";
+      counts[c] = (counts[c] || 0) + 1;
+    });
+    let max = 0, result = "€";
+    for (const [c, n] of Object.entries(counts)) {
+      if (n > max) { max = n; result = c; }
+    }
+    return result;
+  })();
   const totalAmount = subscriptions.reduce((sum, sub) => sum + sub.amount, 0);
   const getProportionalAngle = (amount) => (amount / totalAmount) * 360;
 
@@ -493,6 +518,7 @@ export default function App() {
         total: totalAmount,
         since: newSubSince,
         url: newSubUrl.trim() || undefined,
+        currency: newSubCurrency,
       },
     ]);
 
@@ -503,6 +529,7 @@ export default function App() {
     setNewSubColor("#E50914");
     setNewSubSince("");
     setNewSubUrl("");
+    setNewSubCurrency("€");
     setFormError("");
     setAddFormClosing(true);
 
@@ -529,6 +556,7 @@ export default function App() {
       color: sub.color,
       since: sub.since,
       url: sub.url || "",
+      currency: sub.currency || "€",
     });
     setEditFormError("");
     // Detect icon type for the toggle
@@ -577,6 +605,7 @@ export default function App() {
             total: totalAmount,
             since: editForm.since,
             url: editForm.url.trim() || undefined,
+            currency: editForm.currency,
           }
         : s
     ));
@@ -822,7 +851,7 @@ export default function App() {
                   {yearlyView ? "Annual" : "Monthly"} spend
                 </div>
                 <div className="text-3xl font-bold">
-                  €
+                  {primaryCurrency}
                   {yearlyView
                     ? (
                         subscriptions.reduce(
@@ -1052,7 +1081,7 @@ export default function App() {
               </div>
               <div className="mt-8 pt-6 border-t border-gray-700 text-center text-gray-400 text-sm">
                 {subscriptions.length} active subscription
-                {subscriptions.length !== 1 ? "s" : ""} • €{totalSpend}/month
+                {subscriptions.length !== 1 ? "s" : ""} • {primaryCurrency}{totalSpend}/month
               </div>
             </div>
           </div>
@@ -1139,17 +1168,22 @@ export default function App() {
                     <label className="block text-sm font-semibold text-gray-300 mb-2">
                       Currency
                     </label>
-                    <select className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500">
-                      <option>€ EUR</option>
-                      <option>$ USD</option>
-                      <option>£ GBP</option>
-                      <option>¥ JPY</option>
-                      <option>₹ INR</option>
-                      <option>$ CAD</option>
-                      <option>$ AUD</option>
-                      <option>Fr CHF</option>
-                      <option>kr SEK</option>
-                      <option>R$ BRL</option>
+                    <select
+                      value={newSubCurrency}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const symbol = val.split(" ")[0];
+                        setNewSubCurrency(symbol);
+                      }}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500">
+                      <option value="€">€ EUR</option>
+                      <option value="$">$ USD</option>
+                      <option value="£">£ GBP</option>
+                      <option value="¥">¥ JPY</option>
+                      <option value="₹">₹ INR</option>
+                      <option value="Fr">Fr CHF</option>
+                      <option value="kr">kr SEK</option>
+                      <option value="R$">R$ BRL</option>
                     </select>
                   </div>
                 </div>
@@ -1495,7 +1529,7 @@ export default function App() {
                             className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                           <div>
                             <label className="block text-sm font-semibold text-gray-300 mb-2">Amount</label>
                             <input
@@ -1505,6 +1539,22 @@ export default function App() {
                               onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
                               className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
                             />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">Currency</label>
+                            <select
+                              value={editForm.currency}
+                              onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })}
+                              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500">
+                              <option value="€">€ EUR</option>
+                              <option value="$">$ USD</option>
+                              <option value="£">£ GBP</option>
+                              <option value="¥">¥ JPY</option>
+                              <option value="₹">₹ INR</option>
+                              <option value="Fr">Fr CHF</option>
+                              <option value="kr">kr SEK</option>
+                              <option value="R$">R$ BRL</option>
+                            </select>
                           </div>
                           <div>
                             <label className="block text-sm font-semibold text-gray-300 mb-2">Day</label>
@@ -1669,7 +1719,7 @@ export default function App() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-white truncate">{sub.name}</div>
-                          <div className="text-sm text-gray-400">€{sub.amount.toFixed(2)} • {sub.frequency}</div>
+                          <div className="text-sm text-gray-400">{sub.currency || "€"}{sub.amount.toFixed(2)} • {sub.frequency}</div>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <button
@@ -1700,7 +1750,7 @@ export default function App() {
               </div>
 
               <div className="mt-6 pt-4 border-t border-gray-700 text-center text-gray-400 text-sm">
-                {subscriptions.length} subscription{subscriptions.length !== 1 ? "s" : ""} • €{totalSpend}/month
+                {subscriptions.length} subscription{subscriptions.length !== 1 ? "s" : ""} • {primaryCurrency}{totalSpend}/month
               </div>
             </div>
           </div>
@@ -1939,7 +1989,7 @@ export default function App() {
                         </span>
                       </div>
                       <span className="font-bold text-xl text-white text-right ml-12">
-                        €{displaySub.amount.toFixed(2)}
+                        {displaySub.currency || "€"}{displaySub.amount.toFixed(2)}
                       </span>
                     </div>
                     <div
@@ -1984,7 +2034,7 @@ export default function App() {
                         {displaySub.since.split("-")[0]}
                       </span>
                       <span className="font-bold text-xl text-white text-right ml-12">
-                        €{displaySub.total.toFixed(2)}
+                        {displaySub.currency || "€"}{displaySub.total.toFixed(2)}
                       </span>
                     </div>
                     {displaySub.url && (
@@ -2004,7 +2054,7 @@ export default function App() {
                         }}
                       >
                         <a
-                          href={displaySub.url}
+                          href={normalizeUrl(displaySub.url)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 text-sm font-semibold transition-colors hover:opacity-80 pointer-events-auto"
@@ -2312,7 +2362,7 @@ export default function App() {
                     }}
                   >
                     <div className="text-sm text-gray-400">Monthly spend</div>
-                    <div className="text-3xl font-bold">€{totalSpend}</div>
+                    <div className="text-3xl font-bold">{primaryCurrency}{totalSpend}</div>
                     <style>{`
                 @keyframes moveTotalSpend {
                   0% {
@@ -2706,18 +2756,18 @@ export default function App() {
                       </span>
                     </div>
                     <div className="text-2xl font-bold mb-2">
-                      €{selectedSub.amount.toFixed(2)} / {selectedSub.frequency}
+                      {selectedSub.currency || "€"}{selectedSub.amount.toFixed(2)} / {selectedSub.frequency}
                     </div>
                     <div className="text-xs text-gray-400">
                       Total since {selectedSub.since.split("-")[1]}-
                       {selectedSub.since.split("-")[0]}:{" "}
                       <span className="font-semibold">
-                        €{selectedSub.total.toFixed(2)}
+                        {selectedSub.currency || "€"}{selectedSub.total.toFixed(2)}
                       </span>
                     </div>
                     {selectedSub.url && (
                       <a
-                        href={selectedSub.url}
+                        href={normalizeUrl(selectedSub.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 text-xs font-semibold mt-2 transition-colors hover:opacity-80 pointer-events-auto"
@@ -2740,7 +2790,7 @@ export default function App() {
                     onClick={handleCloseCircle}
                   >
                     <div className="text-sm text-gray-400">Monthly spend</div>
-                    <div className="text-4xl font-bold">€{totalSpend}</div>
+                    <div className="text-4xl font-bold">{primaryCurrency}{totalSpend}</div>
                     <div className="text-xs text-gray-500 mt-2">
                       Click to close
                     </div>
