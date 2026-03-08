@@ -48,7 +48,7 @@ This project avoids heavy UI libraries in favor of custom implementation for max
 * **Build Tool:** Vite
 * **State Management:** React Hooks (`useState`, `useRef`, `useEffect`)
 * **Data Persistence:** Asynchronous File Storage via `window.storage` IPC bridge (JSON)
-* **Icons:** Emoji / Text / SVG fallback engine (zero icon libraries)
+* **Icons:** Emoji / Text / Link Favicon / SVG fallback engine (zero icon libraries)
 
 ### The "Math" Bit
 The radial menu isn't a pre-made component. It calculates the arc length for every subscription based on its cost relative to the total:
@@ -78,7 +78,7 @@ const y = radius * Math.sin(angle);
     ```
 3.  Run the development server:
     ```bash
-    npm start
+    npm run dev
     ```
 
 ---
@@ -88,11 +88,16 @@ const y = radius * Math.sin(angle);
 You can easily add new icons or currency types in the `App.tsx` file. The app currently supports a hybrid input system allowing for:
 * **Emojis:** 🎵, 📺, 🎮
 * **Text:** "N" (Netflix), "Sp" (Spotify)
+* **Link Favicon:** Paste a URL to auto-fetch the site's favicon as the icon.
 * **Preset SVGs:** Built-in brand logos.
 
 ---
 
 ## 📋 Changelog
+
+### v1.2.0 — March 7, 2026
+* **Favicon from Link** — New "Link" icon input method in Add/Edit forms. Paste a URL and the site's favicon is automatically used as the subscription icon (powered by Google Favicon API).
+* **Subscription URL** — Optional website URL field on each subscription. When set, a "Visit website →" link appears in the hover tooltip and the radial chart info card, opening in a new tab.
 
 ### v1.1.0 — March 2, 2026
 * **Edit Subscriptions panel** — Clicking "Edit Subscriptions" in the Manage panel now opens a full management UI.

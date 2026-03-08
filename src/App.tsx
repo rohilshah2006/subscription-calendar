@@ -32,7 +32,7 @@ export default function App() {
   const [showEditPanel, setShowEditPanel] = useState(false);
   const [editPanelClosing, setEditPanelClosing] = useState(false);
   const [editingSubId, setEditingSubId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: "", amount: "", icon: "", day: "", color: "#E50914", since: "" });
+  const [editForm, setEditForm] = useState({ name: "", amount: "", icon: "", day: "", color: "#E50914", since: "", url: "" });
   const [editIconMethod, setEditIconMethod] = useState("emoji");
   const [deletingSubId, setDeletingSubId] = useState(null);
   const [editFormError, setEditFormError] = useState("");
@@ -45,6 +45,7 @@ export default function App() {
   const [newSubDay, setNewSubDay] = useState("");
   const [newSubColor, setNewSubColor] = useState("#E50914");
   const [newSubSince, setNewSubSince] = useState("");
+  const [newSubUrl, setNewSubUrl] = useState("");
   const [formError, setFormError] = useState("");
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [primarySubsByDay, setPrimarySubsByDay] = useState({});
@@ -69,6 +70,7 @@ export default function App() {
       frequency: "Every 2nd",
       total: 47.88,
       since: "2022-03-01",
+      url: undefined as string | undefined,
     },
     {
       id: 2,
@@ -310,6 +312,23 @@ export default function App() {
   };
 
   const renderSubscriptionIcon = (sub) => {
+    // Handle favicon-based icons
+    if (sub.icon && sub.icon.startsWith("favicon:")) {
+      const domain = sub.icon.replace("favicon:", "");
+      return (
+        <img
+          src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+          alt={sub.name}
+          className="rounded"
+          style={{ width: "28px", height: "28px", objectFit: "contain" }}
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+            (e.target as HTMLImageElement).insertAdjacentHTML("afterend", '<span class="text-2xl">🌐</span>');
+          }}
+        />
+      );
+    }
+
     if (sub.icon === "N")
       return <span className="text-red-600 font-bold text-3xl">N</span>;
     if (sub.icon === "in")
@@ -473,6 +492,7 @@ export default function App() {
         frequency: `Every ${day}${getSuffix(day)}`,
         total: totalAmount,
         since: newSubSince,
+        url: newSubUrl.trim() || undefined,
       },
     ]);
 
@@ -482,6 +502,7 @@ export default function App() {
     setNewSubDay("");
     setNewSubColor("#E50914");
     setNewSubSince("");
+    setNewSubUrl("");
     setFormError("");
     setAddFormClosing(true);
 
@@ -507,14 +528,19 @@ export default function App() {
       day: sub.day.toString(),
       color: sub.color,
       since: sub.since,
+      url: sub.url || "",
     });
     setEditFormError("");
     // Detect icon type for the toggle
-    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1F004}-\u{1F0CF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{1F170}-\u{1F251}]/u;
-    if (emojiRegex.test(sub.icon)) {
-      setEditIconMethod("emoji");
+    if (sub.icon && sub.icon.startsWith("favicon:")) {
+      setEditIconMethod("link");
     } else {
-      setEditIconMethod("letter");
+      const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1F004}-\u{1F0CF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{1F170}-\u{1F251}]/u;
+      if (emojiRegex.test(sub.icon)) {
+        setEditIconMethod("emoji");
+      } else {
+        setEditIconMethod("letter");
+      }
     }
   };
 
@@ -550,6 +576,7 @@ export default function App() {
             frequency: `Every ${day}${getSuffix(day)}`,
             total: totalAmount,
             since: editForm.since,
+            url: editForm.url.trim() || undefined,
           }
         : s
     ));
@@ -1161,6 +1188,16 @@ export default function App() {
                     >
                       Custom
                     </button>
+                    <button
+                      onClick={() => setIconInputMethod("link")}
+                      className={`flex-1 py-2 rounded-lg transition-colors text-sm ${
+                        iconInputMethod === "link"
+                          ? "bg-gray-700 text-white"
+                          : "bg-gray-800 text-gray-400"
+                      }`}
+                    >
+                      Link
+                    </button>
                   </div>
                   {iconInputMethod === "emoji" && (
                     <input
@@ -1219,6 +1256,39 @@ export default function App() {
                       onChange={(e) => setNewSubIcon(e.target.value)}
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
                     />
+                  )}
+                  {iconInputMethod === "link" && (
+                    <div>
+                      <input
+                        type="url"
+                        placeholder="https://netflix.com"
+                        onChange={(e) => {
+                          const value = e.target.value.trim();
+                          if (value) {
+                            try {
+                              const url = new URL(value.startsWith("http") ? value : `https://${value}`);
+                              setNewSubIcon(`favicon:${url.hostname}`);
+                            } catch {
+                              setNewSubIcon("");
+                            }
+                          } else {
+                            setNewSubIcon("");
+                          }
+                        }}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                      />
+                      {newSubIcon && newSubIcon.startsWith("favicon:") && (
+                        <div className="mt-2 flex items-center gap-2 text-sm text-gray-400">
+                          <img
+                            src={`https://www.google.com/s2/favicons?domain=${newSubIcon.replace("favicon:", "")}&sz=64`}
+                            alt="Preview"
+                            className="rounded"
+                            style={{ width: "24px", height: "24px" }}
+                          />
+                          <span>Favicon preview</span>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div
@@ -1280,6 +1350,18 @@ export default function App() {
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    Website URL <span className="text-gray-500 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://netflix.com/account"
+                    value={newSubUrl}
+                    onChange={(e) => setNewSubUrl(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                  />
+                </div>
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={() => {
@@ -1291,6 +1373,7 @@ export default function App() {
                       setNewSubDay("");
                       setNewSubSince("");
                       setNewSubColor("#E50914");
+                      setNewSubUrl("");
                       setTimeout(() => {
                         setShowAddNewForm(false);
                         setAddFormClosing(false);
@@ -1458,6 +1541,10 @@ export default function App() {
                               onClick={() => setEditIconMethod("letter")}
                               className={`flex-1 py-2 rounded-lg transition-colors text-sm ${editIconMethod === "letter" ? "bg-gray-700 text-white" : "bg-gray-900 text-gray-400"}`}
                             >Custom</button>
+                            <button
+                              onClick={() => setEditIconMethod("link")}
+                              className={`flex-1 py-2 rounded-lg transition-colors text-sm ${editIconMethod === "link" ? "bg-gray-700 text-white" : "bg-gray-900 text-gray-400"}`}
+                            >Link</button>
                           </div>
                           {editIconMethod === "emoji" && (
                             <input
@@ -1495,6 +1582,50 @@ export default function App() {
                               className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
                             />
                           )}
+                          {editIconMethod === "link" && (
+                            <div>
+                              <input
+                                type="url"
+                                placeholder="https://netflix.com"
+                                defaultValue={editForm.icon.startsWith("favicon:") ? editForm.icon.replace("favicon:", "https://") : ""}
+                                onChange={(e) => {
+                                  const value = e.target.value.trim();
+                                  if (value) {
+                                    try {
+                                      const url = new URL(value.startsWith("http") ? value : `https://${value}`);
+                                      setEditForm({ ...editForm, icon: `favicon:${url.hostname}` });
+                                    } catch {
+                                      setEditForm({ ...editForm, icon: "" });
+                                    }
+                                  } else {
+                                    setEditForm({ ...editForm, icon: "" });
+                                  }
+                                }}
+                                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                              />
+                              {editForm.icon && editForm.icon.startsWith("favicon:") && (
+                                <div className="mt-2 flex items-center gap-2 text-sm text-gray-400">
+                                  <img
+                                    src={`https://www.google.com/s2/favicons?domain=${editForm.icon.replace("favicon:", "")}&sz=64`}
+                                    alt="Preview"
+                                    className="rounded"
+                                    style={{ width: "24px", height: "24px" }}
+                                  />
+                                  <span>Favicon preview</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-300 mb-2">Website URL <span className="text-gray-500 font-normal">(optional)</span></label>
+                          <input
+                            type="url"
+                            placeholder="https://netflix.com/account"
+                            value={editForm.url}
+                            onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
+                            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                          />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
@@ -1856,6 +1987,39 @@ export default function App() {
                         €{displaySub.total.toFixed(2)}
                       </span>
                     </div>
+                    {displaySub.url && (
+                      <div
+                        className="mt-3 pt-3 border-t border-gray-700 flex justify-center"
+                        style={{
+                          animation:
+                            tooltipSlideDirection === "left"
+                              ? "tooltipSlideOutLeft 0.2s ease-out"
+                              : tooltipSlideDirection === "right"
+                              ? "tooltipSlideOutRight 0.2s ease-out"
+                              : tooltipSlideDirection === "" &&
+                                isTooltipTransitioning
+                              ? "none"
+                              : "tooltipSlideIn 0.2s ease-out",
+                          opacity: tooltipSlideDirection ? 0 : 1,
+                        }}
+                      >
+                        <a
+                          href={displaySub.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm font-semibold transition-colors hover:opacity-80 pointer-events-auto"
+                          style={{ color: displaySub.color, cursor: "pointer" }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                            <polyline points="15 3 21 3 21 9" />
+                            <line x1="10" y1="14" x2="21" y2="3" />
+                          </svg>
+                          Visit website →
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2340,6 +2504,16 @@ export default function App() {
                       />
                       {!animatingIcons && (
                         <>
+                          {sub.icon && sub.icon.startsWith("favicon:") && (
+                            <image
+                              href={`https://www.google.com/s2/favicons?domain=${sub.icon.replace("favicon:", "")}&sz=64`}
+                              x={iconX - 14}
+                              y={iconY - 14}
+                              width="28"
+                              height="28"
+                              className="pointer-events-none"
+                            />
+                          )}
                           {sub.icon === "N" && (
                             <text
                               x={iconX}
@@ -2541,6 +2715,23 @@ export default function App() {
                         €{selectedSub.total.toFixed(2)}
                       </span>
                     </div>
+                    {selectedSub.url && (
+                      <a
+                        href={selectedSub.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold mt-2 transition-colors hover:opacity-80 pointer-events-auto"
+                        style={{ color: selectedSub.color, cursor: "pointer" }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                          <polyline points="15 3 21 3 21 9" />
+                          <line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                        Visit →
+                      </a>
+                    )}
                   </div>
                 ) : (
                   <div
