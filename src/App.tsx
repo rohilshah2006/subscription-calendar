@@ -8,6 +8,7 @@ export default function App() {
   const fadeTimeoutRef = React.useRef(null);
   const [circleClosing, setCircleClosing] = useState(false);
   const [circleOpening, setCircleOpening] = useState(false);
+  const [circleOpeningDash, setCircleOpeningDash] = useState(false);
   const [animatingIcons, setAnimatingIcons] = useState(false);
   const [animatingTotal, setAnimatingTotal] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -437,39 +438,50 @@ export default function App() {
       "=== CLOSING CIRCLE - justSelectedPrimaryId is:",
       justSelectedPrimaryId
     );
+    // Phase 1: Arcs shrink (0.8s)
     setCircleClosing(true);
-    setAnimatingIcons(true);
-    setAnimatingTotal(true);
-    // Wait for the 0.8s dash-offset shrink transition to finish
+    // Fade out center text smoothly
     setTimeout(() => {
-      setShowCircle(false);
-      setCircleClosing(false);
-      setAnimatingIcons(false);
-      setAnimatingTotal(false);
+      setAnimatingTotal(true);
+    }, 50);
+    // Phase 2: After arcs finish shrinking, icons fly back to calendar (0.4s)
+    setTimeout(() => {
+      setAnimatingIcons(true);
+      // Phase 3: After icons finish flying back, clean up
       setTimeout(() => {
-        setJustSelectedPrimaryId(null);
-      }, 100);
-    }, 900);
+        setShowCircle(false);
+        setCircleClosing(false);
+        setAnimatingIcons(false);
+        setAnimatingTotal(false);
+        setTimeout(() => {
+          setJustSelectedPrimaryId(null);
+        }, 100);
+      }, 500);
+    }, 800);
   };
 
   const handleOpenCircle = () => {
+    // Phase 1: Show circle, icons fly from calendar to circle positions (0.4s)
     setShowCircle(true);
     setCircleOpening(true);
+    setCircleOpeningDash(true);
     setAnimatingIcons(true);
     setAnimatingTotal(true);
-    // After first paint with dashOffset=arcLength (hidden),
-    // flip circleOpening to false so dashOffset becomes 0
-    // and the 0.8s CSS transition reveals the arcs
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setCircleOpening(false);
-      });
-    });
-    // Icons and total appear after arcs finish expanding
+    // Phase 2: After icons land (0.4s), start arc expansion (0.8s)
     setTimeout(() => {
       setAnimatingIcons(false);
-      setAnimatingTotal(false);
-    }, 900);
+      // Start the arc expansion
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setCircleOpeningDash(false);
+        });
+      });
+      // Phase 3: After arcs finish expanding (0.8s more), show total text
+      setTimeout(() => {
+        setCircleOpening(false);
+        setAnimatingTotal(false);
+      }, 900);
+    }, 450);
   };
 
   const handleAddSubscription = () => {
@@ -2253,7 +2265,7 @@ export default function App() {
           </div>
         )}
 
-        {animatingIcons && !circleOpening && (
+        {animatingIcons && (
           <div className="fixed inset-0 z-40 pointer-events-none">
             {subscriptions.map((sub, index) => {
               const previousAngles = subscriptions
@@ -2409,11 +2421,7 @@ export default function App() {
                 height="500"
                 viewBox="0 0 500 500"
                 style={{
-                  opacity:
-                    circleClosing && animatingIcons ? 0 : circleOpening ? 0 : 1,
-                  animation: circleOpening
-                    ? "fade-in 0.8s ease-out forwards"
-                    : "none",
+                  opacity: circleClosing && animatingIcons ? 0 : 1,
                   transition:
                     circleClosing && animatingIcons
                       ? "opacity 0.4s ease-out"
@@ -2504,7 +2512,7 @@ export default function App() {
 
                   // Calculate arc length for stroke-dash animation
                   const arcLength = (arcSize / 360) * 2 * Math.PI * radius;
-                  const isAnimating = circleOpening || circleClosing;
+                  const isAnimating = circleOpeningDash || circleClosing;
                   const dashOffset = isAnimating ? arcLength : 0;
 
                   return (
@@ -2538,29 +2546,29 @@ export default function App() {
                           }, 500);
                         }}
                       />
-                      <circle
-                        cx={iconX} cy={iconY} r="22"
-                        fill={sub.name === "Amazon" || sub.name === "Jet Brains" ? "#3a3a3a" : "transparent"}
-                        style={{
-                          transform: selectedSub?.id === sub.id ? "scale(1.15)" : "scale(1)",
-                          transformOrigin: `${iconX}px ${iconY}px`,
-                          transition: "all 0.3s ease",
-                        }}
-                        onMouseEnter={() => {
-                          if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
-                          setFadingOut(false);
-                          setSelectedSub(sub);
-                        }}
-                        onMouseLeave={() => {
-                          setFadingOut(true);
-                          fadeTimeoutRef.current = setTimeout(() => {
-                            setSelectedSub(null);
-                            setFadingOut(false);
-                          }, 500);
-                        }}
-                      />
                       {!animatingIcons && (
                         <>
+                          <circle
+                            cx={iconX} cy={iconY} r="22"
+                            fill={sub.name === "Amazon" || sub.name === "Jet Brains" ? "#3a3a3a" : "transparent"}
+                            style={{
+                              transform: selectedSub?.id === sub.id ? "scale(1.15)" : "scale(1)",
+                              transformOrigin: `${iconX}px ${iconY}px`,
+                              transition: "all 0.3s ease",
+                            }}
+                            onMouseEnter={() => {
+                              if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+                              setFadingOut(false);
+                              setSelectedSub(sub);
+                            }}
+                            onMouseLeave={() => {
+                              setFadingOut(true);
+                              fadeTimeoutRef.current = setTimeout(() => {
+                                setSelectedSub(null);
+                                setFadingOut(false);
+                              }, 500);
+                            }}
+                          />
                           {sub.icon && sub.icon.startsWith("favicon:") && (
                             <image
                               href={`https://www.google.com/s2/favicons?domain=${sub.icon.replace("favicon:", "")}&sz=64`}
@@ -2592,15 +2600,8 @@ export default function App() {
               <div
                 className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[250px] h-[140px] flex items-center justify-center pointer-events-none"
                 style={{
-                  opacity:
-                    circleClosing && animatingTotal ? 0 : circleOpening ? 0 : 1,
-                  animation: circleOpening
-                    ? "fade-in 0.8s ease-out forwards"
-                    : "none",
-                  transition:
-                    circleClosing && animatingTotal
-                      ? "opacity 0.4s ease-out"
-                      : "none",
+                  opacity: animatingIcons ? 0 : 1,
+                  transition: "opacity 0.5s ease-out",
                 }}
               >
                 {selectedSub ? (
@@ -2653,7 +2654,7 @@ export default function App() {
                 ) : (
                   <div
                     className="text-center hover:opacity-80 transition-opacity pointer-events-auto"
-                    style={{ opacity: animatingTotal ? 0 : 1 }}
+                    style={{ opacity: animatingIcons ? 0 : 1, transition: "opacity 0.5s ease-out" }}
                     onClick={handleCloseCircle}
                   >
                     <div className="text-sm text-gray-400">Monthly spend</div>
