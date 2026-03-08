@@ -438,20 +438,18 @@ export default function App() {
       justSelectedPrimaryId
     );
     setCircleClosing(true);
+    setAnimatingIcons(true);
+    setAnimatingTotal(true);
+    // Wait for the 0.8s dash-offset shrink transition to finish
     setTimeout(() => {
-      setAnimatingIcons(true);
-      setAnimatingTotal(true);
+      setShowCircle(false);
+      setCircleClosing(false);
+      setAnimatingIcons(false);
+      setAnimatingTotal(false);
       setTimeout(() => {
-        setShowCircle(false);
-        setCircleClosing(false);
-        setAnimatingIcons(false);
-        setAnimatingTotal(false);
-        // Reset AFTER a small delay to ensure animations complete
-        setTimeout(() => {
-          setJustSelectedPrimaryId(null);
-        }, 100);
-      }, 400);
-    }, 800);
+        setJustSelectedPrimaryId(null);
+      }, 100);
+    }, 900);
   };
 
   const handleOpenCircle = () => {
@@ -459,11 +457,19 @@ export default function App() {
     setCircleOpening(true);
     setAnimatingIcons(true);
     setAnimatingTotal(true);
+    // After first paint with dashOffset=arcLength (hidden),
+    // flip circleOpening to false so dashOffset becomes 0
+    // and the 0.8s CSS transition reveals the arcs
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setCircleOpening(false);
+      });
+    });
+    // Icons and total appear after arcs finish expanding
     setTimeout(() => {
-      setCircleOpening(false);
       setAnimatingIcons(false);
       setAnimatingTotal(false);
-    }, 800);
+    }, 900);
   };
 
   const handleAddSubscription = () => {
@@ -2458,40 +2464,12 @@ export default function App() {
                   const iconX = centerX + iconRadius * Math.cos(midAngle);
                   const iconY = centerY + iconRadius * Math.sin(midAngle);
 
-                  // For the opening/closing animation, use a tiny arc at center
-                  if (circleOpening || circleClosing) {
-                    const arcCenter = angleOffset + segmentAngle / 2;
-                    const tinySize = 0.1;
-                    const tinyStart = (arcCenter - tinySize / 2) * (Math.PI / 180);
-                    const tinyEnd = (arcCenter + tinySize / 2) * (Math.PI / 180);
-                    const x1 = centerX + radius * Math.cos(tinyStart);
-                    const y1 = centerY + radius * Math.sin(tinyStart);
-                    const x2 = centerX + radius * Math.cos(tinyEnd);
-                    const y2 = centerY + radius * Math.sin(tinyEnd);
-                    const pathData = `M ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2}`;
-
-                    return (
-                      <g key={sub.id}>
-                        <path
-                          d={pathData}
-                          fill="none"
-                          stroke={`url(#gradient-${sub.id})`}
-                          strokeWidth={strokeWidth}
-                          strokeLinecap="round"
-                          style={{
-                            opacity: 0.85,
-                            transition: "all 0.8s ease-out",
-                          }}
-                        />
-                      </g>
-                    );
-                  }
-
                   // For the static (open) view, handle full-circle case
                   const effectiveGap = segmentAngle > gapSize ? gapSize : Math.max(segmentAngle * 0.2, 2);
                   const arcSize = Math.max(segmentAngle - effectiveGap, 0.1);
 
-                  // Near-full-circle segment: split into two arcs
+                  // Build the path — split into two arcs for near-full-circle
+                  let pathData: string;
                   if (arcSize >= 359) {
                     const half = arcSize / 2;
                     const startDeg = angleOffset + effectiveGap / 2;
@@ -2512,95 +2490,22 @@ export default function App() {
                     const la1 = half > 180 ? 1 : 0;
                     const la2 = half > 180 ? 1 : 0;
 
-                    const pathData = `M ${ax1} ${ay1} A ${radius} ${radius} 0 ${la1} 1 ${ax2} ${ay2} A ${radius} ${radius} 0 ${la2} 1 ${ax3} ${ay3}`;
-
-                    return (
-                      <g key={sub.id}>
-                        <path
-                          d={pathData}
-                          fill="none"
-                          stroke={`url(#gradient-${sub.id})`}
-                          strokeWidth={
-                            selectedSub?.id === sub.id ? strokeWidth + 3 : strokeWidth
-                          }
-                          strokeLinecap="round"
-                          style={{
-                            opacity: selectedSub?.id === sub.id ? 1 : 0.85,
-                            transition: "all 0.3s ease",
-                          }}
-                          onMouseEnter={() => {
-                            if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
-                            setFadingOut(false);
-                            setSelectedSub(sub);
-                          }}
-                          onMouseLeave={() => {
-                            setFadingOut(true);
-                            fadeTimeoutRef.current = setTimeout(() => {
-                              setSelectedSub(null);
-                              setFadingOut(false);
-                            }, 500);
-                          }}
-                        />
-                        <circle
-                          cx={iconX} cy={iconY} r="22"
-                          fill={sub.name === "Amazon" || sub.name === "Jet Brains" ? "#3a3a3a" : "transparent"}
-                          style={{
-                            transform: selectedSub?.id === sub.id ? "scale(1.15)" : "scale(1)",
-                            transformOrigin: `${iconX}px ${iconY}px`,
-                            transition: "all 0.3s ease",
-                          }}
-                          onMouseEnter={() => {
-                            if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
-                            setFadingOut(false);
-                            setSelectedSub(sub);
-                          }}
-                          onMouseLeave={() => {
-                            setFadingOut(true);
-                            fadeTimeoutRef.current = setTimeout(() => {
-                              setSelectedSub(null);
-                              setFadingOut(false);
-                            }, 500);
-                          }}
-                        />
-                        {!animatingIcons && (
-                          <>
-                            {sub.icon && sub.icon.startsWith("favicon:") && (
-                              <image
-                                href={`https://www.google.com/s2/favicons?domain=${sub.icon.replace("favicon:", "")}&sz=64`}
-                                x={iconX - 14}
-                                y={iconY - 14}
-                                width="28"
-                                height="28"
-                                className="pointer-events-none"
-                              />
-                            )}
-                            {!(sub.icon && sub.icon.startsWith("favicon:")) && (() => {
-                              if (sub.icon === "N") return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill="#E50914" fontSize="28" fontWeight="bold" className="pointer-events-none">N</text>;
-                              if (sub.icon === "in") return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill="#0A66C2" fontSize="20" fontWeight="bold" className="pointer-events-none">in</text>;
-                              if (sub.icon === "a") return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="28" fontWeight="bold" className="pointer-events-none">a</text>;
-                              if (sub.icon === "M") return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill="#FF3D57" fontSize="28" fontWeight="bold" className="pointer-events-none">M</text>;
-                              if (["♫", "⚡", "🔧", "🌀"].includes(sub.icon)) return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fontSize="24" className="pointer-events-none">{sub.icon}</text>;
-                              const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1F004}-\u{1F0CF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{1F170}-\u{1F251}]/u;
-                              if (emojiRegex.test(sub.icon)) return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fontSize="24" className="pointer-events-none">{sub.icon}</text>;
-                              return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill={sub.color} fontSize="28" fontWeight="bold" className="pointer-events-none">{sub.icon}</text>;
-                            })()}
-                          </>
-                        )}
-                      </g>
-                    );
+                    pathData = `M ${ax1} ${ay1} A ${radius} ${radius} 0 ${la1} 1 ${ax2} ${ay2} A ${radius} ${radius} 0 ${la2} 1 ${ax3} ${ay3}`;
+                  } else {
+                    const startAngle = (angleOffset + effectiveGap / 2) * (Math.PI / 180);
+                    const endAngle = (angleOffset + segmentAngle - effectiveGap / 2) * (Math.PI / 180);
+                    const x1 = centerX + radius * Math.cos(startAngle);
+                    const y1 = centerY + radius * Math.sin(startAngle);
+                    const x2 = centerX + radius * Math.cos(endAngle);
+                    const y2 = centerY + radius * Math.sin(endAngle);
+                    const largeArc = arcSize > 180 ? 1 : 0;
+                    pathData = `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`;
                   }
 
-                  // Normal case: segment less than 359 degrees
-                  const startAngle = (angleOffset + effectiveGap / 2) * (Math.PI / 180);
-                  const endAngle = (angleOffset + segmentAngle - effectiveGap / 2) * (Math.PI / 180);
-
-                  const x1 = centerX + radius * Math.cos(startAngle);
-                  const y1 = centerY + radius * Math.sin(startAngle);
-                  const x2 = centerX + radius * Math.cos(endAngle);
-                  const y2 = centerY + radius * Math.sin(endAngle);
-
-                  const largeArc = arcSize > 180 ? 1 : 0;
-                  const pathData = `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`;
+                  // Calculate arc length for stroke-dash animation
+                  const arcLength = (arcSize / 360) * 2 * Math.PI * radius;
+                  const isAnimating = circleOpening || circleClosing;
+                  const dashOffset = isAnimating ? arcLength : 0;
 
                   return (
                     <g key={sub.id}>
@@ -2609,18 +2514,19 @@ export default function App() {
                         fill="none"
                         stroke={`url(#gradient-${sub.id})`}
                         strokeWidth={
-                          selectedSub?.id === sub.id
-                            ? strokeWidth + 3
-                            : strokeWidth
+                          selectedSub?.id === sub.id ? strokeWidth + 3 : strokeWidth
                         }
                         strokeLinecap="round"
+                        strokeDasharray={arcLength}
+                        strokeDashoffset={dashOffset}
                         style={{
                           opacity: selectedSub?.id === sub.id ? 1 : 0.85,
-                          transition: "all 0.3s ease",
+                          transition: isAnimating
+                            ? "stroke-dashoffset 0.8s ease-out, opacity 0.3s ease"
+                            : "all 0.3s ease",
                         }}
                         onMouseEnter={() => {
-                          if (fadeTimeoutRef.current)
-                            clearTimeout(fadeTimeoutRef.current);
+                          if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
                           setFadingOut(false);
                           setSelectedSub(sub);
                         }}
@@ -2633,25 +2539,15 @@ export default function App() {
                         }}
                       />
                       <circle
-                        cx={iconX}
-                        cy={iconY}
-                        r="22"
-                        fill={
-                          sub.name === "Amazon" || sub.name === "Jet Brains"
-                            ? "#3a3a3a"
-                            : "transparent"
-                        }
+                        cx={iconX} cy={iconY} r="22"
+                        fill={sub.name === "Amazon" || sub.name === "Jet Brains" ? "#3a3a3a" : "transparent"}
                         style={{
-                          transform:
-                            selectedSub?.id === sub.id
-                              ? "scale(1.15)"
-                              : "scale(1)",
+                          transform: selectedSub?.id === sub.id ? "scale(1.15)" : "scale(1)",
                           transformOrigin: `${iconX}px ${iconY}px`,
                           transition: "all 0.3s ease",
                         }}
                         onMouseEnter={() => {
-                          if (fadeTimeoutRef.current)
-                            clearTimeout(fadeTimeoutRef.current);
+                          if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
                           setFadingOut(false);
                           setSelectedSub(sub);
                         }}
@@ -2689,6 +2585,7 @@ export default function App() {
                       )}
                     </g>
                   );
+
                 })}
               </svg>
 
