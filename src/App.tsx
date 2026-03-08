@@ -2444,37 +2444,155 @@ export default function App() {
                       0
                     );
                   const segmentAngle = getProportionalAngle(sub.amount);
-                  const gapSize = 16;
+                  const gapSize = subscriptions.length === 1 ? 0 : 16;
                   const angleOffset = -90 + previousAngles;
                   const midAngle =
                     (angleOffset + segmentAngle / 2) * (Math.PI / 180);
-
-                  let arcSize =
-                    circleOpening || circleClosing
-                      ? 0.1
-                      : Math.max(segmentAngle - gapSize, 0.1);
-                  let startAngle, endAngle;
-
-                  if (circleOpening || circleClosing) {
-                    const arcCenter = angleOffset + segmentAngle / 2;
-                    startAngle = (arcCenter - arcSize / 2) * (Math.PI / 180);
-                    endAngle = (arcCenter + arcSize / 2) * (Math.PI / 180);
-                  } else {
-                    const effectiveGap =
-                      segmentAngle > gapSize
-                        ? gapSize
-                        : Math.max(segmentAngle * 0.2, 2);
-                    startAngle =
-                      (angleOffset + effectiveGap / 2) * (Math.PI / 180);
-                    endAngle =
-                      (angleOffset + segmentAngle - effectiveGap / 2) *
-                      (Math.PI / 180);
-                  }
 
                   const radius = 170;
                   const strokeWidth = 35;
                   const centerX = 250;
                   const centerY = 250;
+
+                  const iconRadius = 220;
+                  const iconX = centerX + iconRadius * Math.cos(midAngle);
+                  const iconY = centerY + iconRadius * Math.sin(midAngle);
+
+                  // For the opening/closing animation, use a tiny arc at center
+                  if (circleOpening || circleClosing) {
+                    const arcCenter = angleOffset + segmentAngle / 2;
+                    const tinySize = 0.1;
+                    const tinyStart = (arcCenter - tinySize / 2) * (Math.PI / 180);
+                    const tinyEnd = (arcCenter + tinySize / 2) * (Math.PI / 180);
+                    const x1 = centerX + radius * Math.cos(tinyStart);
+                    const y1 = centerY + radius * Math.sin(tinyStart);
+                    const x2 = centerX + radius * Math.cos(tinyEnd);
+                    const y2 = centerY + radius * Math.sin(tinyEnd);
+                    const pathData = `M ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2}`;
+
+                    return (
+                      <g key={sub.id}>
+                        <path
+                          d={pathData}
+                          fill="none"
+                          stroke={`url(#gradient-${sub.id})`}
+                          strokeWidth={strokeWidth}
+                          strokeLinecap="round"
+                          style={{
+                            opacity: 0.85,
+                            transition: "all 0.8s ease-out",
+                          }}
+                        />
+                      </g>
+                    );
+                  }
+
+                  // For the static (open) view, handle full-circle case
+                  const effectiveGap = segmentAngle > gapSize ? gapSize : Math.max(segmentAngle * 0.2, 2);
+                  const arcSize = Math.max(segmentAngle - effectiveGap, 0.1);
+
+                  // Near-full-circle segment: split into two arcs
+                  if (arcSize >= 359) {
+                    const half = arcSize / 2;
+                    const startDeg = angleOffset + effectiveGap / 2;
+                    const midDeg = startDeg + half;
+                    const endDeg = startDeg + arcSize;
+
+                    const s1 = startDeg * (Math.PI / 180);
+                    const m1 = midDeg * (Math.PI / 180);
+                    const e1 = endDeg * (Math.PI / 180);
+
+                    const ax1 = centerX + radius * Math.cos(s1);
+                    const ay1 = centerY + radius * Math.sin(s1);
+                    const ax2 = centerX + radius * Math.cos(m1);
+                    const ay2 = centerY + radius * Math.sin(m1);
+                    const ax3 = centerX + radius * Math.cos(e1);
+                    const ay3 = centerY + radius * Math.sin(e1);
+
+                    const la1 = half > 180 ? 1 : 0;
+                    const la2 = half > 180 ? 1 : 0;
+
+                    const pathData = `M ${ax1} ${ay1} A ${radius} ${radius} 0 ${la1} 1 ${ax2} ${ay2} A ${radius} ${radius} 0 ${la2} 1 ${ax3} ${ay3}`;
+
+                    return (
+                      <g key={sub.id}>
+                        <path
+                          d={pathData}
+                          fill="none"
+                          stroke={`url(#gradient-${sub.id})`}
+                          strokeWidth={
+                            selectedSub?.id === sub.id ? strokeWidth + 3 : strokeWidth
+                          }
+                          strokeLinecap="round"
+                          style={{
+                            opacity: selectedSub?.id === sub.id ? 1 : 0.85,
+                            transition: "all 0.3s ease",
+                          }}
+                          onMouseEnter={() => {
+                            if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+                            setFadingOut(false);
+                            setSelectedSub(sub);
+                          }}
+                          onMouseLeave={() => {
+                            setFadingOut(true);
+                            fadeTimeoutRef.current = setTimeout(() => {
+                              setSelectedSub(null);
+                              setFadingOut(false);
+                            }, 500);
+                          }}
+                        />
+                        <circle
+                          cx={iconX} cy={iconY} r="22"
+                          fill={sub.name === "Amazon" || sub.name === "Jet Brains" ? "#3a3a3a" : "transparent"}
+                          style={{
+                            transform: selectedSub?.id === sub.id ? "scale(1.15)" : "scale(1)",
+                            transformOrigin: `${iconX}px ${iconY}px`,
+                            transition: "all 0.3s ease",
+                          }}
+                          onMouseEnter={() => {
+                            if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+                            setFadingOut(false);
+                            setSelectedSub(sub);
+                          }}
+                          onMouseLeave={() => {
+                            setFadingOut(true);
+                            fadeTimeoutRef.current = setTimeout(() => {
+                              setSelectedSub(null);
+                              setFadingOut(false);
+                            }, 500);
+                          }}
+                        />
+                        {!animatingIcons && (
+                          <>
+                            {sub.icon && sub.icon.startsWith("favicon:") && (
+                              <image
+                                href={`https://www.google.com/s2/favicons?domain=${sub.icon.replace("favicon:", "")}&sz=64`}
+                                x={iconX - 14}
+                                y={iconY - 14}
+                                width="28"
+                                height="28"
+                                className="pointer-events-none"
+                              />
+                            )}
+                            {!(sub.icon && sub.icon.startsWith("favicon:")) && (() => {
+                              if (sub.icon === "N") return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill="#E50914" fontSize="28" fontWeight="bold" className="pointer-events-none">N</text>;
+                              if (sub.icon === "in") return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill="#0A66C2" fontSize="20" fontWeight="bold" className="pointer-events-none">in</text>;
+                              if (sub.icon === "a") return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="28" fontWeight="bold" className="pointer-events-none">a</text>;
+                              if (sub.icon === "M") return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill="#FF3D57" fontSize="28" fontWeight="bold" className="pointer-events-none">M</text>;
+                              if (["♫", "⚡", "🔧", "🌀"].includes(sub.icon)) return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fontSize="24" className="pointer-events-none">{sub.icon}</text>;
+                              const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1F004}-\u{1F0CF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{1F170}-\u{1F251}]/u;
+                              if (emojiRegex.test(sub.icon)) return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fontSize="24" className="pointer-events-none">{sub.icon}</text>;
+                              return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill={sub.color} fontSize="28" fontWeight="bold" className="pointer-events-none">{sub.icon}</text>;
+                            })()}
+                          </>
+                        )}
+                      </g>
+                    );
+                  }
+
+                  // Normal case: segment less than 359 degrees
+                  const startAngle = (angleOffset + effectiveGap / 2) * (Math.PI / 180);
+                  const endAngle = (angleOffset + segmentAngle - effectiveGap / 2) * (Math.PI / 180);
 
                   const x1 = centerX + radius * Math.cos(startAngle);
                   const y1 = centerY + radius * Math.sin(startAngle);
@@ -2483,10 +2601,6 @@ export default function App() {
 
                   const largeArc = arcSize > 180 ? 1 : 0;
                   const pathData = `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`;
-
-                  const iconRadius = 220;
-                  const iconX = centerX + iconRadius * Math.cos(midAngle);
-                  const iconY = centerY + iconRadius * Math.sin(midAngle);
 
                   return (
                     <g key={sub.id}>
@@ -2502,10 +2616,7 @@ export default function App() {
                         strokeLinecap="round"
                         style={{
                           opacity: selectedSub?.id === sub.id ? 1 : 0.85,
-                          transition:
-                            circleOpening || circleClosing
-                              ? "all 0.8s ease-out"
-                              : "all 0.3s ease",
+                          transition: "all 0.3s ease",
                         }}
                         onMouseEnter={() => {
                           if (fadeTimeoutRef.current)
@@ -2564,157 +2675,16 @@ export default function App() {
                               className="pointer-events-none"
                             />
                           )}
-                          {sub.icon === "N" && (
-                            <text
-                              x={iconX}
-                              y={iconY}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              fill="#E50914"
-                              fontSize="28"
-                              fontWeight="bold"
-                              className="pointer-events-none"
-                            >
-                              N
-                            </text>
-                          )}
-                          {sub.icon === "in" && (
-                            <text
-                              x={iconX}
-                              y={iconY}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              fill="#0A66C2"
-                              fontSize="20"
-                              fontWeight="bold"
-                              className="pointer-events-none"
-                            >
-                              in
-                            </text>
-                          )}
-                          {sub.icon === "a" && (
-                            <text
-                              x={iconX}
-                              y={iconY}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              fill="white"
-                              fontSize="28"
-                              fontWeight="bold"
-                              className="pointer-events-none"
-                            >
-                              a
-                            </text>
-                          )}
-                          {sub.icon === "M" && (
-                            <text
-                              x={iconX}
-                              y={iconY}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              fill="#FF3D57"
-                              fontSize="28"
-                              fontWeight="bold"
-                              className="pointer-events-none"
-                            >
-                              M
-                            </text>
-                          )}
-                          {sub.icon === "♫" && (
-                            <text
-                              x={iconX}
-                              y={iconY}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              fill="#1DB954"
-                              fontSize="28"
-                              fontWeight="bold"
-                              className="pointer-events-none"
-                            >
-                              ♫
-                            </text>
-                          )}
-                          {sub.icon === "⚡" && (
-                            <text
-                              x={iconX}
-                              y={iconY}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              fontSize="28"
-                              className="pointer-events-none"
-                            >
-                              ⚡
-                            </text>
-                          )}
-                          {sub.icon === "🔧" && (
-                            <text
-                              x={iconX}
-                              y={iconY}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              fill="white"
-                              fontSize="20"
-                              className="pointer-events-none"
-                            >
-                              🔧
-                            </text>
-                          )}
-                          {sub.icon === "🌀" && (
-                            <text
-                              x={iconX}
-                              y={iconY}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              fontSize="24"
-                              className="pointer-events-none"
-                            >
-                              🌀
-                            </text>
-                          )}
-                          {![
-                            "N",
-                            "in",
-                            "a",
-                            "M",
-                            "♫",
-                            "⚡",
-                            "🔧",
-                            "🌀",
-                          ].includes(sub.icon) &&
-                            (() => {
-                              const emojiRegex =
-                                /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1F004}-\u{1F0CF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{1F170}-\u{1F251}]/u;
-                              const isEmoji = emojiRegex.test(sub.icon);
-                              if (isEmoji) {
-                                return (
-                                  <text
-                                    x={iconX}
-                                    y={iconY}
-                                    textAnchor="middle"
-                                    dominantBaseline="middle"
-                                    fontSize="24"
-                                    className="pointer-events-none"
-                                  >
-                                    {sub.icon}
-                                  </text>
-                                );
-                              } else {
-                                return (
-                                  <text
-                                    x={iconX}
-                                    y={iconY}
-                                    textAnchor="middle"
-                                    dominantBaseline="middle"
-                                    fill={sub.color}
-                                    fontSize="28"
-                                    fontWeight="bold"
-                                    className="pointer-events-none"
-                                  >
-                                    {sub.icon}
-                                  </text>
-                                );
-                              }
-                            })()}
+                          {!(sub.icon && sub.icon.startsWith("favicon:")) && (() => {
+                            if (sub.icon === "N") return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill="#E50914" fontSize="28" fontWeight="bold" className="pointer-events-none">N</text>;
+                            if (sub.icon === "in") return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill="#0A66C2" fontSize="20" fontWeight="bold" className="pointer-events-none">in</text>;
+                            if (sub.icon === "a") return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="28" fontWeight="bold" className="pointer-events-none">a</text>;
+                            if (sub.icon === "M") return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill="#FF3D57" fontSize="28" fontWeight="bold" className="pointer-events-none">M</text>;
+                            if (["♫", "⚡", "🔧", "🌀"].includes(sub.icon)) return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fontSize="24" className="pointer-events-none">{sub.icon}</text>;
+                            const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1F004}-\u{1F0CF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{1F170}-\u{1F251}]/u;
+                            if (emojiRegex.test(sub.icon)) return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fontSize="24" className="pointer-events-none">{sub.icon}</text>;
+                            return <text x={iconX} y={iconY} textAnchor="middle" dominantBaseline="middle" fill={sub.color} fontSize="28" fontWeight="bold" className="pointer-events-none">{sub.icon}</text>;
+                          })()}
                         </>
                       )}
                     </g>
