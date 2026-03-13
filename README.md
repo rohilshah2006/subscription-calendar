@@ -31,13 +31,12 @@ At the click of a button, the interface warps from a calendar grid into a **Radi
 ### Tech Stack
 
 <div align="left">
-  <img src="https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB" alt="React" />
-  <img src="https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
-  <br>
-  <img src="https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
-  <img src="https://img.shields.io/badge/tauri-%2324C8DB?style=for-the-badge&logo=tauri&logoColor=white" alt="Tauri" />
-  <img src="https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel" />
+  <img src="https://img.shields.io/badge/react-%2320232a.svg?logo=react&logoColor=%2361DAFB" alt="React" />
+  <img src="https://img.shields.io/badge/typescript-%23007ACC.svg?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/vite-%23646CFF.svg?logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/tauri-%2324C8DB?logo=tauri&logoColor=white" alt="Tauri" />
+  <img src="https://img.shields.io/badge/vercel-%23000000.svg?logo=vercel&logoColor=white" alt="Vercel" />
 </div>
 
 <br>
@@ -74,10 +73,16 @@ Access the latest version of the calendar instantly in your browser:
 For a more integrated experience with dock access and native performance:
 1. Go to the **[Releases](https://github.com/rohilshah2006/subscription-calendar/releases)** page.
 2. Download the installer for your platform:
-   - **macOS:** `.dmg`
+   - **macOS:** `.dmg` (choose `aarch64` for M1/M2/M3 chips)
    - **Windows:** `.exe`
    - **Linux:** `.deb` or `.AppImage`
 3. Install and run.
+
+**Note for macOS:** If you see a message saying the app is "damaged," don't worry! This is a standard security warning for non-notarized apps. To fix it, run this command in your terminal:
+```bash
+xattr -cr /Applications/Subscription\ Calendar.app
+```
+**Note for Windows/Linux:** You may need to click "More Info" -> "Run Anyway" if your system flags the installer.
 
 ---
 
@@ -110,6 +115,12 @@ You can easily add new icons or currency types in the `App.tsx` file. The app cu
 ---
 
 ## 📋 Changelog
+
+### v1.2.4 — March 13, 2026
+* **Native Desktop Shell** — The app is now fully optimized for macOS, Windows, and Linux using Tauri.
+* **Pro Cursor (JS-Lerp)** — Replaced standard CSS transitions with a high-performance JavaScript Linear Interpolation system for the custom cursor, ensuring silky smooth movement in the native app.
+* **Professional Branding** — Updated app display name and icons for a premium system feel.
+* **Automated Release Pipeline** — Integrated GitHub Actions to automatically build and publish installers for all platforms.
 
 ### v1.2.0 — March 7, 2026
 * **Favicon from Link** — New "Link" icon input method in Add/Edit forms. Paste a URL and the site's favicon is automatically used as the subscription icon (powered by Google Favicon API).
