@@ -36,6 +36,7 @@ At the click of a button, the interface warps from a calendar grid into a **Radi
   <img src="https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
   <br>
   <img src="https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/tauri-%2324C8DB?style=for-the-badge&logo=tauri&logoColor=white" alt="Tauri" />
   <img src="https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel" />
 </div>
 
@@ -61,25 +62,40 @@ const y = radius * Math.sin(angle);
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Stay Synced
 
-### Prerequisites
-* Node.js installed
-* npm or yarn
+The Subscription Calendar is available wherever you need it—on the web or as a native desktop application. Your data persists locally on your machine, ensuring privacy and speed.
 
-### Installation
-1.  Clone the repo:
-    ```bash
-    git clone https://github.com/rohilshah2006/subscription-calendar.git
-    ```
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Run the development server:
-    ```bash
-    npm run dev
-    ```
+### 🌐 Web Version
+Access the latest version of the calendar instantly in your browser:  
+👉 **[View on Naxera Space](https://subscription-calendar.naxera.space)**
+
+### 💻 Desktop App (macOS, Windows, Linux)
+For a more integrated experience with dock access and native performance:
+1. Go to the **[Releases](https://github.com/rohilshah2006/subscription-calendar/releases)** page.
+2. Download the installer for your platform:
+   - **macOS:** `.dmg`
+   - **Windows:** `.exe`
+   - **Linux:** `.deb` or `.AppImage`
+3. Install and run.
+
+---
+
+## 📦 Desktop Releases (CI/CD)
+
+This project uses **GitHub Actions** to automatically build and publish releases for macOS, Windows, and Linux.
+
+### How to trigger a new release:
+1. Update the version in `package.json` and `src-tauri/tauri.conf.json`.
+2. Push a new tag to GitHub:
+   ```bash
+   git tag v1.2.1
+   git push origin v1.2.1
+   ```
+3. GitHub will automatically:
+   *   Spin up macOS, Windows, and Linux runners.
+   *   Compile the native binaries.
+   *   Draft a new release in your repository with the installers attached.
 
 ---
 

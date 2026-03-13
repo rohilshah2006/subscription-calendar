@@ -11,7 +11,9 @@ export default function App() {
   const [circleOpeningDash, setCircleOpeningDash] = useState(false);
   const [animatingIcons, setAnimatingIcons] = useState(false);
   const [animatingTotal, setAnimatingTotal] = useState(false);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const cursorRef = useRef<HTMLDivElement>(null);
+  const mouseRef = useRef({ x: -100, y: -100 });
+  const posRef = useRef({ x: -100, y: -100 });
   const isInitialMountSubscriptions = useRef(true);
   const isInitialMountPrimary = useRef(true);
 
@@ -227,10 +229,30 @@ export default function App() {
   }, [primarySubsByDay]);
 
   React.useEffect(() => {
-    const handleMouseMove = (e) =>
-      setMousePosition({ x: e.clientX, y: e.clientY });
+    const handleMouseMove = (e: MouseEvent) => {
+      mouseRef.current = { x: e.clientX, y: e.clientY };
+    };
+
+    let rafId: number;
+    const updateCursor = () => {
+      // Linear Interpolation (Lerp) - 0.15 is the smoothing factor
+      const lerp = 0.15;
+      posRef.current.x += (mouseRef.current.x - posRef.current.x) * lerp;
+      posRef.current.y += (mouseRef.current.y - posRef.current.y) * lerp;
+
+      if (cursorRef.current) {
+        cursorRef.current.style.transform = `translate3d(${posRef.current.x}px, ${posRef.current.y}px, 0) translate(-50%, -50%)`;
+      }
+      rafId = requestAnimationFrame(updateCursor);
+    };
+
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    rafId = requestAnimationFrame(updateCursor);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      cancelAnimationFrame(rafId);
+    };
   }, []);
 
   const getCurrencySymbol = (currencyStr: string) => {
@@ -674,12 +696,12 @@ export default function App() {
       `}</style>
 
       <div
+        ref={cursorRef}
         className="fixed pointer-events-none"
         style={{
-          left: `${mousePosition.x}px`,
-          top: `${mousePosition.y}px`,
-          transform: "translate(-50%, -50%)",
-          transition: "left 0.1s ease-out, top 0.1s ease-out",
+          left: 0,
+          top: 0,
+          transform: `translate3d(-100px, -100px, 0) translate(-50%, -50%)`,
           zIndex: 99999,
         }}
       >
