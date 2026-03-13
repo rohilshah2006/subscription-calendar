@@ -89,8 +89,8 @@ This project uses **GitHub Actions** to automatically build and publish releases
 1. Update the version in `package.json` and `src-tauri/tauri.conf.json`.
 2. Push a new tag to GitHub:
    ```bash
-   git tag v1.2.1
-   git push origin v1.2.1
+   git tag v1.2.2
+   git push origin v1.2.2
    ```
 3. GitHub will automatically:
    *   Spin up macOS, Windows, and Linux runners.
